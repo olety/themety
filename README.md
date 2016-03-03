@@ -8,12 +8,12 @@
 ###Features:
 
 * If in the `git` repository, it shows the current branch and whether its committed at the right-hand side 
-* Shows blue colons instead of the red ones when you're `ssh`'ing somewhere
+* Shows cyan colons instead of the white ones when you're `ssh`'ing somewhere
 * The arrows becomes red when you're root
 
 ###Preview: 
 
-![Preview](http://devety.com/wp-content/uploads/2016/03/themety1.png)
+![Preview][Preview Link]
 
 ###Installation guide
 
@@ -23,3 +23,6 @@
     Run`$EDITOR ~/.zshrc` and set the theme to `themety` [`ZSH_THEME="themety"`]
 3. ???
 4. PROFIT
+
+
+[Preview Link]: http://devety.com/wp-content/uploads/2016/03/preview2.png
