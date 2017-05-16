@@ -23,4 +23,4 @@
 4. PROFIT
 
 
-[Preview Link]: http://i.imgur.com/d18NiYP.png
+[Preview Link]: screenshot.png
