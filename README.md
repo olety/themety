@@ -1,19 +1,19 @@
-#Themety - v0.2
+# Themety - v0.3
 
-###My custom zsh theme
+### My custom zsh theme
 
 * Inspired by [afowler's theme](https://github.com/robbyrussell/oh-my-zsh/blob/master/themes/afowler.zsh-theme).
 * Works best with `tomorrow-night` or `tomorrow-night-eighties` themes, you can get them [here](https://github.com/chriskempson/tomorrow-theme)
 
-###Features:
+### Features:
 
 * If in the `git` repository, it shows the current branch and whether its committed at the right-hand side 
 
-###Preview: 
+### Preview: 
 
 ![Preview][Preview Link]
 
-###Installation guide
+### Installation guide
 
 1. Download the theme <br>
     Run `wget -P $ZSH/themes/ https://raw.githubusercontent.com/olety/themety/master/themety.zsh-theme`
