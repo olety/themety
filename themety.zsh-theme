@@ -1,4 +1,4 @@
-PROMPT='%F{red}%m%B%F{white}:%b%F{blue}%n%B%F{white}:%b%F{yellow}%3~ %F{blue}⇁ %f'
+PROMPT='%F{red}%m%B%F{white}:%b%F{blue}%n%B%F{white}:%b%F{yellow}%3~ %F{blue}⇀ %f'
 
 RPROMPT='$(git_prompt_info)'
 
