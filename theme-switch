@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+import json
+import re
+import signal
+import subprocess
+import sys
+import os
+from pathlib import Path
+
+def get_mode(argv):
+    if len(argv) > 1 and argv[1] in ("light", "dark"):
+        return argv[1]
+    from datetime import datetime
+    hour = datetime.now().hour
+    return "light" if 7 <= hour < 19 else "dark"
+
+def set_claude_theme(mode):
+    claude_json = Path.home() / ".claude.json"
+    data = {}
+    if claude_json.exists():
+        data = json.loads(claude_json.read_text())
+    data["theme"] = mode
+    claude_json.write_text(json.dumps(data, indent=2) + "\n")
+
+def set_system_color_scheme(mode):
+    scheme = "prefer-dark" if mode == "dark" else "default"
+    os.system(f"gsettings set org.gnome.desktop.interface color-scheme '{scheme}'")
+
+def set_foot_theme(mode):
+    config = Path.home() / ".config" / "foot" / "foot.ini"
+    if config.exists():
+        text = config.read_text()
+        text = re.sub(
+            r"initial-color-theme=\w+",
+            f"initial-color-theme={mode}",
+            text,
+        )
+        config.write_text(text)
+
+    sig = signal.SIGUSR1 if mode == "dark" else signal.SIGUSR2
+    try:
+        result = subprocess.run(["pgrep", "-u", str(os.getuid()), "^foot$"],
+                                capture_output=True, text=True)
+        for pid in result.stdout.strip().split("\n"):
+            if pid:
+                os.kill(int(pid), sig)
+    except Exception:
+        pass
+
+if __name__ == "__main__":
+    mode = get_mode(sys.argv)
+    Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state")).mkdir(parents=True, exist_ok=True)
+    (Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state")) / "theme").write_text(mode)
+    set_claude_theme(mode)
+    set_system_color_scheme(mode)
+    set_foot_theme(mode)
