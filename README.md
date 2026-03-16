@@ -55,21 +55,15 @@ Add to `~/.claude/settings.json`:
 
 ### macOS
 
-Use [claude-theme-sync](https://github.com/alfredomtx/claude-theme-sync) — a lightweight Swift daemon that watches `AppleInterfaceThemeChangedNotification` and updates Claude Code's theme in `~/.claude.json` in real-time. Terminal theme switching depends on your terminal emulator (iTerm2, Ghostty, etc. handle this natively).
+`themety-sync` is a Swift daemon that watches macOS appearance changes and keeps Claude Code's theme in `~/.claude.json` in sync. It also watches the file itself — if Claude Code overwrites it and drops the theme key, the daemon re-applies it.
 
 ```sh
-git clone https://github.com/alfredomtx/claude-theme-sync.git
-cd claude-theme-sync && ./install.sh
+./install-sync.sh
 ```
 
-Requires Xcode CLI tools (`xcode-select --install`). Runs as a launchd agent — starts on login, restarts on crash.
+Requires Xcode CLI tools (`xcode-select --install`). Runs as a launchd agent — starts on login, restarts on crash. Terminal theme switching depends on your terminal emulator (iTerm2, Ghostty, etc. handle this natively).
 
-**Pitfalls:**
-
-- Needs macOS auto appearance enabled: System Settings > Appearance > Auto (or `defaults write -g AppleInterfaceStyleSwitchesAutomatically -bool true`). Without this, macOS never fires the theme change notification.
-- Only updates `~/.claude.json` — it does **not** sync your terminal emulator. iTerm2, Ghostty, etc. follow macOS appearance natively via their own settings (e.g. iTerm2: Profiles > Colors > "Use different preset for Light and Dark Mode").
-- Rewrites `~/.claude.json` with sorted keys and pretty-print. Shouldn't cause issues but worth knowing if you diff the file.
-- The statusline reads `~/.local/state/theme` first (written by `theme-switch` on Linux), then falls back to `~/.claude.json` (written by claude-theme-sync on macOS). Both paths are covered.
+**Note:** Needs macOS auto appearance enabled: System Settings > Appearance > Auto (or `defaults write -g AppleInterfaceStyleSwitchesAutomatically -bool true`).
 
 ### Linux (foot + freedesktop)
 
