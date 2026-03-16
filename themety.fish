@@ -14,7 +14,7 @@ function fish_prompt
     else
         set -l theme (cat ~/.local/state/theme 2>/dev/null; or echo dark)
         if test "$theme" = light
-            set sep_color --bold B4A7C7
+            set sep_color --bold C4A57B
         else
             set sep_color --bold white
         end

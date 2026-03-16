@@ -8,7 +8,7 @@ Minimal prompt theme with SSH awareness for zsh, fish, and Claude Code.
 
 - `hostname:user:path ⇀` layout
 - Git branch + dirty indicator
-- SSH-aware separator color (bold white on dark, bold mauve on light, bright red over SSH)
+- SSH-aware separator color (bold white on dark, bold camel on light, bright red over SSH)
 - Light/dark theme compatible
 
 ## Shell Prompt

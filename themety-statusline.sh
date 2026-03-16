@@ -60,7 +60,7 @@ if [ -n "$SSH_CONNECTION" ]; then
 else
     theme=$(cat "${XDG_STATE_HOME:-$HOME/.local/state}/theme" 2>/dev/null || echo dark)
     if [ "$theme" = "light" ]; then
-        sep="\033[1;38;2;180;167;199m"
+        sep="\033[1;38;2;196;165;123m"
     else
         sep="\033[1;37m"
     fi

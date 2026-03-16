@@ -3,7 +3,7 @@ if [[ -n "$SSH_CONNECTION" ]]; then
 else
   _themety_theme=$(cat "${XDG_STATE_HOME:-$HOME/.local/state}/theme" 2>/dev/null || echo dark)
   if [[ "$_themety_theme" == "light" ]]; then
-    _themety_sep="%B%F{#B4A7C7}"
+    _themety_sep="%B%F{#C4A57B}"
   else
     _themety_sep="%B%F{white}"
   fi
