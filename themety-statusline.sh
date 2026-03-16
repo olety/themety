@@ -61,7 +61,7 @@ else
     theme=$(cat "${XDG_STATE_HOME:-$HOME/.local/state}/theme" 2>/dev/null)
     if [ -z "$theme" ]; then
         if command -v defaults >/dev/null 2>&1; then
-            theme=$(defaults read -g AppleInterfaceStyle 2>/dev/null | tr '[:upper:]' '[:lower:]' || echo light)
+            theme=$({ defaults read -g AppleInterfaceStyle 2>/dev/null || echo light; } | tr '[:upper:]' '[:lower:]')
         else
             theme=$(grep -o '"theme" *: *"[^"]*"' ~/.claude.json 2>/dev/null | sed 's/.*"theme" *: *"//;s/"//')
             : "${theme:=dark}"

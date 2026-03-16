@@ -4,7 +4,7 @@ else
   _themety_theme=$(cat "${XDG_STATE_HOME:-$HOME/.local/state}/theme" 2>/dev/null)
   if [[ -z "$_themety_theme" ]]; then
     if command -v defaults &>/dev/null; then
-      _themety_theme=$(defaults read -g AppleInterfaceStyle 2>/dev/null | tr '[:upper:]' '[:lower:]' || echo light)
+      _themety_theme=$({ defaults read -g AppleInterfaceStyle 2>/dev/null || echo light; } | tr '[:upper:]' '[:lower:]')
     else
       _themety_theme=dark
     fi
