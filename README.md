@@ -69,7 +69,7 @@ Requires Xcode CLI tools (`xcode-select --install`). Runs as a launchd agent —
 - Needs macOS auto appearance enabled: System Settings > Appearance > Auto (or `defaults write -g AppleInterfaceStyleSwitchesAutomatically -bool true`). Without this, macOS never fires the theme change notification.
 - Only updates `~/.claude.json` — it does **not** sync your terminal emulator. iTerm2, Ghostty, etc. follow macOS appearance natively via their own settings (e.g. iTerm2: Profiles > Colors > "Use different preset for Light and Dark Mode").
 - Rewrites `~/.claude.json` with sorted keys and pretty-print. Shouldn't cause issues but worth knowing if you diff the file.
-- The statusline script reads `~/.local/state/theme` for light/dark — claude-theme-sync does **not** write this file (it only writes `~/.claude.json`). On macOS this doesn't matter since the statusline falls back to `dark`, and the separator color difference is subtle. On Linux, `theme-switch` handles this.
+- The statusline reads `~/.local/state/theme` first (written by `theme-switch` on Linux), then falls back to `~/.claude.json` (written by claude-theme-sync on macOS). Both paths are covered.
 
 ### Linux (foot + freedesktop)
 

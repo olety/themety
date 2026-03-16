@@ -58,7 +58,7 @@ fi
 if [ -n "$SSH_CONNECTION" ]; then
     sep="\033[1;31m"
 else
-    theme=$(cat "${XDG_STATE_HOME:-$HOME/.local/state}/theme" 2>/dev/null || echo dark)
+    theme=$(cat "${XDG_STATE_HOME:-$HOME/.local/state}/theme" 2>/dev/null || grep -o '"theme":"[^"]*"' ~/.claude.json 2>/dev/null | sed 's/"theme":"//;s/"//' || echo dark)
     if [ "$theme" = "light" ]; then
         sep="\033[1;38;2;196;165;123m"
     else
