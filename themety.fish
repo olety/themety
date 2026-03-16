@@ -21,7 +21,7 @@ function fish_prompt
     end
 
     set_color red
-    printf '%s' $hostname
+    printf '%s' (prompt_hostname)
     set_color $sep_color
     printf ':'
     set_color normal
