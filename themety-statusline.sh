@@ -58,8 +58,15 @@ fi
 if [ -n "$SSH_CONNECTION" ]; then
     sep="\033[1;31m"
 else
-    theme=$(cat "${XDG_STATE_HOME:-$HOME/.local/state}/theme" 2>/dev/null || { grep -o '"theme" *: *"[^"]*"' ~/.claude.json 2>/dev/null | sed 's/.*"theme" *: *"//;s/"//'; } || echo dark)
-    : "${theme:=dark}"
+    theme=$(cat "${XDG_STATE_HOME:-$HOME/.local/state}/theme" 2>/dev/null)
+    if [ -z "$theme" ]; then
+        if command -v defaults >/dev/null 2>&1; then
+            theme=$(defaults read -g AppleInterfaceStyle 2>/dev/null | tr '[:upper:]' '[:lower:]' || echo light)
+        else
+            theme=$(grep -o '"theme" *: *"[^"]*"' ~/.claude.json 2>/dev/null | sed 's/.*"theme" *: *"//;s/"//')
+            : "${theme:=dark}"
+        fi
+    fi
     if [ "$theme" = "light" ]; then
         sep="\033[1;38;2;196;165;123m"
     else

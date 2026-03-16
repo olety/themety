@@ -12,7 +12,15 @@ function fish_prompt
     if set -q SSH_CONNECTION
         set sep_color brred
     else
-        set -l theme (cat ~/.local/state/theme 2>/dev/null; or echo dark)
+        set -l theme (cat ~/.local/state/theme 2>/dev/null)
+        if test -z "$theme"
+            if command -q defaults
+                # macOS: key exists = dark, missing = light
+                set theme (defaults read -g AppleInterfaceStyle 2>/dev/null | string lower; or echo light)
+            else
+                set theme dark
+            end
+        end
         if test "$theme" = light
             set sep_color --bold C4A57B
         else
