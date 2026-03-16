@@ -57,6 +57,20 @@ Add to `~/.claude/settings.json`:
 
 Use [claude-theme-sync](https://github.com/alfredomtx/claude-theme-sync) — a lightweight Swift daemon that watches `AppleInterfaceThemeChangedNotification` and updates Claude Code's theme in `~/.claude.json` in real-time. Terminal theme switching depends on your terminal emulator (iTerm2, Ghostty, etc. handle this natively).
 
+```sh
+git clone https://github.com/alfredomtx/claude-theme-sync.git
+cd claude-theme-sync && ./install.sh
+```
+
+Requires Xcode CLI tools (`xcode-select --install`). Runs as a launchd agent — starts on login, restarts on crash.
+
+**Pitfalls:**
+
+- Needs macOS auto appearance enabled: System Settings > Appearance > Auto (or `defaults write -g AppleInterfaceStyleSwitchesAutomatically -bool true`). Without this, macOS never fires the theme change notification.
+- Only updates `~/.claude.json` — it does **not** sync your terminal emulator. iTerm2, Ghostty, etc. follow macOS appearance natively via their own settings (e.g. iTerm2: Profiles > Colors > "Use different preset for Light and Dark Mode").
+- Rewrites `~/.claude.json` with sorted keys and pretty-print. Shouldn't cause issues but worth knowing if you diff the file.
+- The statusline script reads `~/.local/state/theme` for light/dark — claude-theme-sync does **not** write this file (it only writes `~/.claude.json`). On macOS this doesn't matter since the statusline falls back to `dark`, and the separator color difference is subtle. On Linux, `theme-switch` handles this.
+
 ### Linux (foot + freedesktop)
 
 `theme-switch` toggles foot terminal (via SIGUSR signals), Claude Code (`~/.claude.json`), and the freedesktop color-scheme (via gsettings) all at once.
