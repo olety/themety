@@ -2,7 +2,7 @@
 
 input=$(cat)
 
-hostname=$(cat /etc/hostname 2>/dev/null || echo "unknown")
+hostname=$(cat /etc/hostname 2>/dev/null || hostname -s)
 username=${USER:-$(id -un)}
 
 cwd=$(echo "$input" | grep -o '"current_dir":"[^"]*"' | head -1 | sed 's/"current_dir":"//;s/"$//')
