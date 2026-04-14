@@ -33,6 +33,11 @@ for f in "$REPO/linux/ghostty/themes/"*; do
 done
 echo "  ghostty + themes"
 
+# Portal config (route Settings to gtk backend for niri)
+mkdir -p ~/.config/xdg-desktop-portal
+ln -sf "$REPO/linux/xdg-desktop-portal/niri-portals.conf" ~/.config/xdg-desktop-portal/niri-portals.conf
+echo "  xdg-desktop-portal config"
+
 # Scripts -> ~/.local/bin/
 mkdir -p ~/.local/bin
 for f in "$REPO/linux/bin/"*; do

@@ -162,8 +162,8 @@ layout {
     // Colors patched dynamically by matugen via patch-niri-colors
     border {
         width 2
-        active-color "#268bd2"
-        inactive-color "#e8e4d8"
+        active-color "#6699cc"
+        inactive-color "#3a3a3a"
     }
 
     // You can enable drop shadows for windows.
@@ -220,6 +220,9 @@ layout {
 // Note that running niri as a session supports xdg-desktop-autostart,
 // which may be more convenient to use.
 // See the binds section below for more spawn examples.
+
+// Import Wayland env into systemd so portals (gtk, gnome) can find the display
+spawn-sh-at-startup "systemctl --user import-environment WAYLAND_DISPLAY"
 
 // This line starts waybar, a commonly used bar for Wayland compositors.
 spawn-at-startup "waybar"
