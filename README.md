@@ -1,123 +1,86 @@
 # Themety
 
-Minimal prompt theme with SSH awareness for zsh, fish, and Claude Code.
+Cross-platform desktop theme system. Shell prompt + full Linux rice + macOS theme sync.
 
-![Preview](screenshot.png)
+![Preview](screenshots/screenshot.png)
 
-## Features
+## Structure
 
-- `hostname:user:path ⇀` layout
-- Git branch + dirty indicator
-- SSH-aware separator color (bold white on dark, bold camel on light, bright red over SSH)
-- Light/dark theme compatible
+```
+shared/     Cross-platform: fish prompt, fish theme, zsh theme, Claude statusline
+linux/      Full niri rice: matugen, niri, waybar, ghostty, foot, eww, mako, fuzzel, scripts
+macos/      Theme sync daemon (Swift + launchd)
+```
+
+## Install
+
+### Linux (full rice)
+
+```sh
+git clone git@github.com:olety/themety.git ~/code/themety
+cd ~/code/themety && linux/install.sh
+```
+
+Creates symlinks from `~/.config/*` and `~/.local/bin/*` into the repo. Edits to live configs are edits to the repo.
+
+**Dependencies:** niri, waybar, matugen, ghostty, foot, eww, mako, fuzzel, awww
+
+### macOS (prompt + theme sync)
+
+```sh
+git clone git@github.com:olety/themety.git ~/code/themety
+cd ~/code/themety && macos/install.sh
+```
+
+Installs fish/zsh prompt + Swift daemon that syncs Claude Code theme with macOS appearance.
+
+Requires Xcode CLI tools (`xcode-select --install`).
+
+### Shared only (prompt on any machine)
+
+```sh
+shared/install.sh
+```
+
+## Palettes
+
+Two fixed palettes. No dynamic wallpaper color extraction.
+
+| | Dark: Tomorrow Night Eighties | Light: Solarized Light |
+|---|---|---|
+| bg | `#2d2d2d` | `#fdf6e3` |
+| fg | `#cccccc` | `#657b83` |
+| accent | `#6699cc` | `#268bd2` |
+| error | `#f2777a` | `#dc322f` |
 
 ## Shell Prompt
 
-### zsh (oh-my-zsh)
+`hostname:user:path ⇀ [branch*]` — SSH-aware separator color, git branch + dirty indicator.
 
-```sh
-wget -P $ZSH/themes/ https://raw.githubusercontent.com/olety/themety/master/themety.zsh-theme
-```
+Works in zsh (oh-my-zsh), fish, and as a Claude Code statusline.
 
-Set in `~/.zshrc`:
+## Linux Rice
 
-```sh
-ZSH_THEME="themety"
-```
+Full niri Wayland compositor setup:
 
-### fish
+- **matugen** — template engine for dark/light mode switching (fixed palettes, conditional templates)
+- **niri** — tiling Wayland compositor, 1px accent borders, easeOutQuint animations
+- **waybar** — status bar with dynamic accent colors
+- **ghostty** — primary terminal, auto dark/light theme switching
+- **foot** — fallback terminal, matugen-templated config
+- **eww** — desktop clock widget (Cormorant Garamond)
+- **mako** — notifications, accent-bordered
+- **fuzzel** — app launcher
+- **whisrs** — voice recording overlay (GTK4 layer-shell)
 
-```sh
-cp themety.fish ~/.config/fish/functions/fish_prompt.fish
-```
+Theme switching: `theme-switch dark` / `theme-switch light` or automatic via systemd timers.
 
-## Claude Code Statusline
+Wallpaper: `Mod+Shift+W` opens fuzzel picker, wallpaper-set handles awww + matugen re-run.
 
-Renders the prompt as a Claude Code statusline, reading workspace JSON from stdin.
+## macOS Theme Sync
 
-```sh
-cp themety-statusline.sh ~/.claude/themety-statusline.sh
-chmod +x ~/.claude/themety-statusline.sh
-```
+`themety-sync` watches `AppleInterfaceThemeChangedNotification` and keeps Claude Code's `~/.claude.json` theme key in sync. Re-applies if Claude overwrites it.
 
-Add to `~/.claude/settings.json`:
+Runs as a launchd agent — starts on login, restarts on crash.
 
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "bash ~/.claude/themety-statusline.sh"
-  }
-}
-```
-
-## Auto Light/Dark Switching
-
-### macOS
-
-`themety-sync` is a Swift daemon that watches macOS appearance changes and keeps Claude Code's theme in `~/.claude.json` in sync. It also watches the file itself — if Claude Code overwrites it and drops the theme key, the daemon re-applies it.
-
-```sh
-./install-sync.sh
-```
-
-Requires Xcode CLI tools (`xcode-select --install`). Runs as a launchd agent — starts on login, restarts on crash. Terminal theme switching depends on your terminal emulator (iTerm2, Ghostty, etc. handle this natively).
-
-**Note:** Needs macOS auto appearance enabled: System Settings > Appearance > Auto (or `defaults write -g AppleInterfaceStyleSwitchesAutomatically -bool true`).
-
-### Linux (foot + freedesktop)
-
-`theme-switch` toggles foot terminal (via SIGUSR signals), Claude Code (`~/.claude.json`), and the freedesktop color-scheme (via gsettings) all at once.
-
-```sh
-cp theme-switch ~/.local/bin/theme-switch
-chmod +x ~/.local/bin/theme-switch
-```
-
-Manual usage:
-
-```sh
-theme-switch light
-theme-switch dark
-theme-switch        # auto: light 07:00-19:00, dark otherwise
-```
-
-Foot config needs `[colors-light]` and `[colors-dark]` sections plus `initial-color-theme=` in `[main]`. See the [foot wiki](https://codeberg.org/dnkl/foot/wiki) for details.
-
-Optional systemd timers for automatic switching:
-
-`~/.config/systemd/user/theme-light.service`:
-
-```ini
-[Unit]
-Description=Switch to light theme
-
-[Service]
-Type=oneshot
-ExecStart=%h/.local/bin/theme-switch light
-```
-
-`~/.config/systemd/user/theme-light.timer`:
-
-```ini
-[Unit]
-Description=Switch to light theme at 07:00
-
-[Timer]
-OnCalendar=*-*-* 07:00:00
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-```
-
-Create matching `theme-dark.service` and `theme-dark.timer` (replace `light` with `dark`, `07:00` with `19:00`).
-
-```sh
-systemctl --user enable --now theme-light.timer theme-dark.timer
-```
-
-## Recommended terminal themes
-
-- Dark: Tomorrow Night Eighties
-- Light: Solarized Light
+Needs: System Settings > Appearance > Auto.

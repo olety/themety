@@ -1,0 +1,14 @@
+#!/bin/bash
+status=$(whisrs status 2>/dev/null)
+
+if [ "$status" = "recording" ]; then
+    whisrs toggle
+    # Overlay auto-exits when it detects status != recording
+else
+    # Kill any stale overlay, start fresh
+    pkill -f "whisrs-overlay" 2>/dev/null
+    makoctl dismiss -a 2>/dev/null
+    whisrs toggle
+    whisrs-overlay &
+    disown
+fi

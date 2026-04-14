@@ -1,0 +1,9 @@
+#!/bin/bash
+status=$(whisrs status 2>/dev/null)
+if [ "$status" = "recording" ]; then
+    echo '{"text": " REC", "class": "recording", "tooltip": "whisrs recording"}'
+elif [ "$status" = "transcribing" ]; then
+    echo '{"text": " ...", "class": "transcribing", "tooltip": "whisrs transcribing"}'
+else
+    echo '{"text": "", "class": "idle"}'
+fi

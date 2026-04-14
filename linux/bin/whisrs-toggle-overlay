@@ -1,0 +1,27 @@
+#!/bin/bash
+status=$(whisrs status 2>/dev/null)
+
+if [ "$status" = "recording" ]; then
+    # Stop recording, kill overlay
+    whisrs toggle
+    pkill -f "whisrs-overlay-meter" 2>/dev/null
+else
+    # Start recording
+    whisrs toggle
+    # Show a small transparent foot window with a live mic meter
+    foot --title="whisrs-overlay-meter" \
+         --override="initial-window-size-chars=40x2" \
+         --override="pad=4x2" \
+         --override="font=monospace:size=11" \
+         bash -c '
+            echo -e "\033[1;31m● REC\033[0m — Mod+Space to stop"
+            # Simple mic level meter using pactl
+            while true; do
+                level=$(pactl get-source-volume @DEFAULT_SOURCE@ 2>/dev/null | grep -oP "\d+%" | head -1 | tr -d "%")
+                bar=""
+                for i in $(seq 1 $((level / 5))); do bar="${bar}█"; done
+                printf "\r\033[1;31m● REC\033[0m %3d%% %-20s" "$level" "$bar"
+                sleep 0.1
+            done
+         ' &
+fi

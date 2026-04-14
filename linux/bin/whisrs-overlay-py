@@ -1,0 +1,429 @@
+#!/usr/bin/env python3
+"""whisrs-overlay: GTK4 layer-shell recording overlay for niri."""
+
+import gi
+
+gi.require_version("Gdk", "4.0")
+gi.require_version("Gtk", "4.0")
+gi.require_version("Gtk4LayerShell", "1.0")
+
+from gi.repository import Gdk, GLib, Gtk, Gtk4LayerShell
+
+import json
+import math
+import struct
+import subprocess
+import threading
+import time
+from pathlib import Path
+
+BAR_COUNT = 20
+TRANSCRIBE_BAR_COUNT = 3
+SAMPLE_RATE = 16000
+CHUNK_MS = 20
+CHUNK_BYTES = SAMPLE_RATE * 2 * CHUNK_MS // 1000
+MIN_FRAME_DT = 1.0 / 240.0
+MAX_FRAME_DT = 0.1
+ATTACK_ALPHA = 0.70
+DECAY_ALPHA = 0.95
+METER_NOISE_GATE = 0.008
+METER_REST_HALF_HEIGHT = 1.5
+METER_BAR_GAP = 3.0
+# Speech-tuned piecewise curve for condenser mic at desk distance.
+METER_TRANSFER_POINTS = (
+    (METER_NOISE_GATE, 0.0),
+    (0.020, 0.18),
+    (0.100, 0.45),
+    (0.300, 0.70),
+    (0.550, 0.88),
+    (0.800, 1.00),
+)
+
+
+def load_theme():
+    path = Path.home() / ".local" / "state" / "theme-colors.json"
+    try:
+        return json.loads(path.read_text())
+    except Exception:
+        return {
+            "bg_raised": "#241F20",
+            "ink": "#F8F2F2",
+            "accent": "#7fc8ff",
+            "accent_dim": "#365166",
+            "error": "#ffb4ab",
+        }
+
+
+def parse_color(hex_str):
+    color = Gdk.RGBA()
+    color.parse(hex_str)
+    return color
+
+
+def get_whisrs_status():
+    try:
+        result = subprocess.run(
+            ["whisrs", "status"],
+            capture_output=True,
+            text=True,
+            timeout=1,
+        )
+        return result.stdout.strip()
+    except Exception:
+        return "idle"
+
+
+def clamp(value, low=0.0, high=1.0):
+    return max(low, min(high, value))
+
+
+def ease_out_quint(value):
+    value = clamp(value)
+    return 1.0 - (1.0 - value) ** 5
+
+
+def interpolate_points(value, points):
+    value = clamp(value)
+    if value <= points[0][0]:
+        return points[0][1]
+    for (x0, y0), (x1, y1) in zip(points, points[1:]):
+        if value <= x1:
+            span = x1 - x0
+            if span <= 0:
+                return y1
+            t = (value - x0) / span
+            return y0 + (y1 - y0) * t
+    return points[-1][1]
+
+
+def map_peak_to_visual_level(peak):
+    return interpolate_points(peak, METER_TRANSFER_POINTS)
+
+
+class AudioReader(threading.Thread):
+    """Capture raw peak audio level from parec."""
+
+    def __init__(self):
+        super().__init__(daemon=True)
+        self.level = 0.0
+        self.running = True
+        self.proc = None
+
+    def run(self):
+        self.proc = subprocess.Popen(
+            [
+                "parec",
+                "--format=s16le",
+                f"--rate={SAMPLE_RATE}",
+                "--channels=1",
+                "--latency-msec=20",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        )
+        if not self.proc.stdout:
+            return
+        while self.running:
+            data = self.proc.stdout.read(CHUNK_BYTES)
+            if not data:
+                break
+            sample_count = len(data) // 2
+            if sample_count == 0:
+                continue
+            samples = struct.unpack(f"<{sample_count}h", data[: sample_count * 2])
+            peak = max(abs(sample) for sample in samples) / 32768.0
+            self.level = peak
+        self.level = 0.0
+
+    def stop(self):
+        self.running = False
+        if not self.proc or self.proc.poll() is not None:
+            return
+        self.proc.terminate()
+        try:
+            self.proc.wait(timeout=1)
+        except subprocess.TimeoutExpired:
+            self.proc.kill()
+
+
+class WhisrsOverlay(Gtk.Application):
+    def __init__(self):
+        super().__init__(application_id="dev.eiri.whisrs-overlay")
+        self.theme = load_theme()
+        self.colors = {
+            "accent": parse_color(self.theme.get("accent", "#7fc8ff")),
+            "accent_dim": parse_color(self.theme.get("accent_dim", "#365166")),
+            "error": parse_color(self.theme.get("error", "#ffb4ab")),
+            "ink": parse_color(self.theme.get("ink", "#F8F2F2")),
+        }
+        self.state = "idle"
+        self.start_time = None
+        self.animation_time = 0.0
+        self.last_frame_time = None
+        self.tick_id = 0
+        self.audio = None
+        self.wave = None
+        self._shutting_down = False
+
+        self.bar_heights = [0.0] * BAR_COUNT
+        self.bar_targets = [0.0] * BAR_COUNT
+        self.bar_speeds = []
+        for i in range(BAR_COUNT):
+            t = abs(i - (BAR_COUNT - 1) / 2.0) / ((BAR_COUNT - 1) / 2.0)
+            self.bar_speeds.append(0.65 + 0.35 * (1.0 - t))
+
+    def do_activate(self):
+        win = Gtk.ApplicationWindow(application=self)
+
+        Gtk4LayerShell.init_for_window(win)
+        Gtk4LayerShell.set_layer(win, Gtk4LayerShell.Layer.OVERLAY)
+        Gtk4LayerShell.set_anchor(win, Gtk4LayerShell.Edge.BOTTOM, True)
+        Gtk4LayerShell.set_margin(win, Gtk4LayerShell.Edge.BOTTOM, 200)
+        Gtk4LayerShell.set_namespace(win, "whisrs-overlay")
+        Gtk4LayerShell.set_keyboard_mode(win, Gtk4LayerShell.KeyboardMode.NONE)
+
+        accent = self.theme.get("accent", "#7fc8ff")
+        bg = self.theme.get("bg_raised", "#241F20")
+        ink = self.theme.get("ink", "#F8F2F2")
+        error = self.theme.get("error", "#ffb4ab")
+
+        css = Gtk.CssProvider()
+        css.load_from_string(
+            f"""
+            .box {{
+                background: {bg};
+                border: 1px solid {error};
+                border-radius: 0;
+                padding: 8px 16px;
+                min-width: 280px;
+            }}
+            .status,
+            .time {{
+                font-family: "Space Mono";
+                font-size: 13px;
+                font-weight: 700;
+            }}
+            .rec {{
+                color: {error};
+            }}
+            .proc {{
+                color: {error};
+            }}
+            .time {{
+                color: {ink};
+                opacity: 0.72;
+            }}
+            """
+        )
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(),
+            css,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+        )
+
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        box.add_css_class("box")
+
+        self.status_label = Gtk.Label(label="\u25cf REC")
+        self.status_label.add_css_class("status")
+        self.status_label.set_xalign(0)
+        box.append(self.status_label)
+
+        self.wave = Gtk.DrawingArea()
+        self.wave.set_size_request(160, 24)
+        self.wave.set_hexpand(True)
+        self.wave.set_draw_func(self._draw)
+        box.append(self.wave)
+
+        self.time_label = Gtk.Label(label="")
+        self.time_label.add_css_class("time")
+        self.time_label.set_xalign(1)
+        box.append(self.time_label)
+
+        win.set_child(box)
+        win.present()
+        self.win = win
+
+        initial_status = get_whisrs_status()
+        if initial_status not in ("recording", "transcribing"):
+            self._shutdown()
+            return
+
+        self._apply_state(initial_status, reset_timer=True)
+        self.tick_id = self.wave.add_tick_callback(self._on_frame)
+        GLib.timeout_add(500, self._poll)
+        GLib.timeout_add(1000, self._clock)
+        self.wave.queue_draw()
+
+    def _draw(self, _area, cr, width, height):
+        if self.state == "transcribing":
+            self._draw_transcribing(cr, width, height)
+            return
+        self._draw_recording(cr, width, height)
+
+    def _draw_recording(self, cr, width, height):
+        bar_color = self.colors["error"]
+        accent_dim = self.colors["accent_dim"]
+        gap = METER_BAR_GAP
+        bar_width = max(2.0, (width - gap * (BAR_COUNT - 1)) / BAR_COUNT)
+        total_width = BAR_COUNT * bar_width + gap * (BAR_COUNT - 1)
+        start_x = max(0.0, (width - total_width) / 2.0)
+        center_y = height / 2.0
+        max_half_height = max(1.0, (height - 2.0) / 2.0)
+
+        cr.set_source_rgba(accent_dim.red, accent_dim.green, accent_dim.blue, 0.28)
+        cr.rectangle(0, center_y - 0.5, width, 1.0)
+        cr.fill()
+
+        cr.set_source_rgba(bar_color.red, bar_color.green, bar_color.blue, 0.55)
+        for index, value in enumerate(self.bar_heights):
+            half_height = max(METER_REST_HALF_HEIGHT, value * max_half_height)
+            x = start_x + index * (bar_width + gap)
+            cr.rectangle(x, center_y - half_height, bar_width, half_height * 2.0)
+            cr.fill()
+
+    def _draw_transcribing(self, cr, width, height):
+        accent = self.colors["error"]
+        radius_base = 2.0
+        radius_range = 1.5
+        gap = 20.0
+        total_width = (
+            TRANSCRIBE_BAR_COUNT * (radius_base + radius_range) * 2.0
+            + gap * (TRANSCRIBE_BAR_COUNT - 1)
+        )
+        start_x = (width - total_width) / 2.0
+        center_y = height / 2.0
+
+        for index in range(TRANSCRIBE_BAR_COUNT):
+            phase = self.animation_time * 5.0 - index * 0.6
+            pulse = ease_out_quint((math.sin(phase) + 1.0) / 2.0)
+            radius = radius_base + pulse * radius_range
+            alpha = 0.20 + pulse * 0.72
+            x = start_x + radius + index * (radius_base + radius_range) * 2.0 + index * gap
+            cr.set_source_rgba(accent.red, accent.green, accent.blue, alpha)
+            cr.arc(x, center_y, radius, 0, 2 * math.pi)
+            cr.fill()
+
+    def _on_frame(self, widget, frame_clock):
+        if self._shutting_down:
+            return False
+        frame_time = frame_clock.get_frame_time()
+        self.animation_time = frame_time / 1_000_000.0
+        if self.last_frame_time is None:
+            dt = 1.0 / 60.0
+        else:
+            dt = (frame_time - self.last_frame_time) / 1_000_000.0
+            dt = max(MIN_FRAME_DT, min(dt, MAX_FRAME_DT))
+        self.last_frame_time = frame_time
+        if self.state == "recording":
+            self._update_recording_bars(dt)
+        else:
+            self._decay_bars(dt)
+        widget.queue_draw()
+        return True
+
+    def _update_recording_bars(self, dt):
+        """All bars target same level. Different speeds create natural wave."""
+        level = self.audio.level if self.audio else 0.0
+        level = clamp(level)
+        target = map_peak_to_visual_level(level)
+
+        for index in range(BAR_COUNT):
+            self.bar_targets[index] = target
+            speed = self.bar_speeds[index]
+            attack = ATTACK_ALPHA ** speed
+            decay = DECAY_ALPHA ** speed
+            alpha = attack if target > self.bar_heights[index] else decay
+            alpha = alpha ** (dt * 60.0)
+            self.bar_heights[index] = self.bar_heights[index] * alpha + target * (1.0 - alpha)
+
+    def _decay_bars(self, dt):
+        for index in range(BAR_COUNT):
+            self.bar_targets[index] = 0.0
+            speed = self.bar_speeds[index]
+            alpha = DECAY_ALPHA ** speed
+            alpha = alpha ** (dt * 60.0)
+            self.bar_heights[index] *= alpha
+
+    def _ensure_audio(self):
+        if self.audio and self.audio.is_alive():
+            return
+        self.audio = AudioReader()
+        self.audio.start()
+
+    def _stop_audio(self):
+        if not self.audio:
+            return
+        audio = self.audio
+        self.audio = None
+        audio.stop()
+        audio.join(timeout=0.2)
+
+    def _apply_state(self, state, reset_timer=False):
+        previous_state = self.state
+        self.state = state
+        self.last_frame_time = None
+
+        if state == "recording":
+            self._ensure_audio()
+            if reset_timer or previous_state != "recording" or self.start_time is None:
+                self.start_time = time.monotonic()
+            self.status_label.set_label("\u25cf REC")
+            self.status_label.remove_css_class("proc")
+            self.status_label.add_css_class("rec")
+            self.time_label.set_label("00:00")
+            self._clock()
+        else:
+            self._stop_audio()
+            self.bar_targets = [0.0] * BAR_COUNT
+            self.status_label.set_label("TRANSCRIBING")
+            self.status_label.remove_css_class("rec")
+            self.status_label.add_css_class("proc")
+            self.time_label.set_label("")
+
+        if self.wave:
+            self.wave.queue_draw()
+
+    def _poll(self):
+        if self._shutting_down:
+            return False
+        status = get_whisrs_status()
+        if status not in ("recording", "transcribing"):
+            self._shutdown()
+            return False
+        if status != self.state:
+            self._apply_state(status, reset_timer=True)
+        elif status == "recording" and self.audio is None:
+            self._ensure_audio()
+        return True
+
+    def _clock(self):
+        if self._shutting_down:
+            return False
+        if self.state == "recording" and self.start_time is not None:
+            seconds = int(time.monotonic() - self.start_time)
+            self.time_label.set_label(f"{seconds // 60:02d}:{seconds % 60:02d}")
+        else:
+            self.time_label.set_label("")
+        return True
+
+    def _cleanup(self):
+        if self.tick_id and self.wave:
+            self.wave.remove_tick_callback(self.tick_id)
+            self.tick_id = 0
+        self._stop_audio()
+
+    def _shutdown(self):
+        if self._shutting_down:
+            return
+        self._shutting_down = True
+        self._cleanup()
+        self.quit()
+
+    def do_shutdown(self):
+        self._cleanup()
+        Gtk.Application.do_shutdown(self)
+
+
+if __name__ == "__main__":
+    WhisrsOverlay().run([])

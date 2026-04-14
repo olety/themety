@@ -1,0 +1,9 @@
+#!/bin/bash
+# Matugen post-hook: signal foot terminals to reload colors
+MODE=$(cat ~/.local/state/theme 2>/dev/null || echo dark)
+
+if [ "$MODE" = "dark" ]; then
+    pkill -SIGUSR1 foot 2>/dev/null || true
+else
+    pkill -SIGUSR2 foot 2>/dev/null || true
+fi

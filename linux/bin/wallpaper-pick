@@ -1,0 +1,7 @@
+#!/bin/bash
+# Fuzzel wallpaper picker — bound to Mod+Shift+W
+WALLDIR="${HOME}/Pictures/Wallpapers"
+
+PICK=$(find "$WALLDIR" -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" \) -printf "%f\n" | sort | fuzzel --dmenu --prompt "wallpaper> ")
+
+[ -n "$PICK" ] && wallpaper-set "${WALLDIR}/${PICK}"

@@ -1,0 +1,27 @@
+;; Desktop Clock — Oneiron/Eiri design language
+;; Cormorant Garamond 300 for time, Space Mono for date
+
+(defpoll clock-hour :interval "1s" "date +%H")
+(defpoll clock-min  :interval "1s" "date +%M")
+(defpoll clock-date :interval "60s" "date '+%B %-d  ·  %A' | tr '[:lower:]' '[:upper:]'")
+
+(defwidget clock []
+  (box :class "clock-container"
+       :orientation "v"
+       :space-evenly false
+       :halign "end"
+    (label :class "clock-time"
+           :text "${clock-hour}:${clock-min}")
+    (label :class "clock-date"
+           :text clock-date)))
+
+(defwindow desktop-clock
+  :monitor 0
+  :geometry (geometry :x "-48px" :y "48px"
+                      :width "360px" :height "160px"
+                      :anchor "top right")
+  :stacking "bottom"
+  :exclusive false
+  :focusable false
+  :namespace "eww-desktop-clock"
+  (clock))

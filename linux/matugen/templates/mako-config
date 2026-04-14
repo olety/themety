@@ -1,0 +1,26 @@
+anchor=bottom-center
+layer=overlay
+default-timeout=3000
+max-visible=1
+width=300
+height=60
+margin=5
+outer-margin=0,0,150,0
+padding=10
+border-size=1
+border-radius=0
+<* if {{ is_dark_mode }} *>
+border-color=#6699cc
+background-color=#2d2d2dE0
+text-color=#cccccc
+<* else *>
+border-color=#268bd2
+background-color=#fdf6e3E0
+text-color=#657b83
+<* endif *>
+font=Space Mono, Noto Color Emoji 12
+
+[mode=light]
+background-color=#fdf6e3E0
+text-color=#657b83
+border-color=#268bd2

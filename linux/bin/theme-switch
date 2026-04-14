@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+import json
+import re
+import signal
+import subprocess
+import sys
+import os
+from pathlib import Path
+
+def get_mode(argv):
+    if len(argv) > 1 and argv[1] in ("light", "dark"):
+        return argv[1]
+    from datetime import datetime
+    hour = datetime.now().hour
+    return "light" if 7 <= hour < 19 else "dark"
+
+def set_claude_theme(mode):
+    claude_json = Path.home() / ".claude.json"
+    data = {}
+    if claude_json.exists():
+        data = json.loads(claude_json.read_text())
+    data["theme"] = mode
+    claude_json.write_text(json.dumps(data, indent=2) + "\n")
+
+def set_system_color_scheme(mode):
+    scheme = "prefer-dark" if mode == "dark" else "default"
+    os.system(f"gsettings set org.gnome.desktop.interface color-scheme '{scheme}'")
+
+def set_foot_theme(mode):
+    config = Path.home() / ".config" / "foot" / "foot.ini"
+    if config.exists():
+        text = config.read_text()
+        text = re.sub(
+            r"initial-color-theme=\w+",
+            f"initial-color-theme={mode}",
+            text,
+        )
+        config.write_text(text)
+
+    sig = signal.SIGUSR1 if mode == "dark" else signal.SIGUSR2
+    try:
+        result = subprocess.run(["pgrep", "-u", str(os.getuid()), "^foot$"],
+                                capture_output=True, text=True)
+        for pid in result.stdout.strip().split("\n"):
+            if pid:
+                os.kill(int(pid), sig)
+    except Exception:
+        pass
+
+def get_wallpaper_for_mode(mode):
+    """Get the wallpaper for this mode, falling back to global."""
+    state_dir = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
+    # Try mode-specific wallpaper first
+    mode_wp = state_dir / f"wallpaper-{mode}"
+    if mode_wp.exists():
+        wp = mode_wp.read_text().strip()
+        if wp and Path(wp).exists():
+            return wp
+    # Fall back to global wallpaper
+    global_wp = state_dir / "wallpaper"
+    if global_wp.exists():
+        wp = global_wp.read_text().strip()
+        if wp and Path(wp).exists():
+            return wp
+    return None
+
+def run_matugen(mode):
+    """Re-run matugen with new mode against the mode's wallpaper.
+    Matugen post-hooks handle foot, mako, niri, waybar, and eww reloads."""
+    wp = get_wallpaper_for_mode(mode)
+    if wp:
+        os.system(f'matugen image "{wp}" -m {mode} 2>/dev/null')
+        # Update global wallpaper pointer
+        state_dir = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
+        (state_dir / "wallpaper").write_text(wp)
+        return True
+    return False
+
+
+if __name__ == "__main__":
+    mode = get_mode(sys.argv)
+    state_dir = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
+    state_dir.mkdir(parents=True, exist_ok=True)
+    (state_dir / "theme").write_text(mode)
+    set_claude_theme(mode)
+    set_system_color_scheme(mode)
+
+    # If wallpaper is set, matugen handles everything (foot, mako, niri, waybar, eww)
+    if not run_matugen(mode):
+        # Fallback: no wallpaper set yet, handle manually
+        set_foot_theme(mode)
+        mako_mode = "light" if mode == "light" else "default"
+        os.system(f"makoctl mode -s {mako_mode} 2>/dev/null")
+        os.system("makoctl reload 2>/dev/null")
+        os.system("pkill -SIGUSR2 waybar 2>/dev/null")
+
+    os.system("eww reload 2>/dev/null")

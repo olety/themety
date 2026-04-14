@@ -1,0 +1,22 @@
+/* Compact titlebar */
+headerbar {
+    min-height: 0;
+    padding: 0 4px;
+    margin: 0;
+    font-size: 11px;
+}
+headerbar title {
+    font-size: 11px;
+    margin: 0;
+    padding: 0;
+}
+headerbar button {
+    min-height: 0;
+    min-width: 0;
+    padding: 0 3px;
+    margin: 0;
+}
+headerbar windowcontrols button {
+    min-height: 16px;
+    min-width: 16px;
+}

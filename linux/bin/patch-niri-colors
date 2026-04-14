@@ -1,0 +1,14 @@
+#!/bin/bash
+# Matugen post-hook: patch niri config with extracted accent colors
+COLORS="${HOME}/.local/state/niri-colors.sh"
+CONFIG="${HOME}/.config/niri/config.kdl"
+
+[ -f "$COLORS" ] || exit 0
+[ -f "$CONFIG" ] || exit 0
+
+source "$COLORS"
+
+sed -i \
+    -e "s/active-color \"#[0-9a-fA-F]*/active-color \"${ACTIVE_COLOR}/" \
+    -e "s/inactive-color \"#[0-9a-fA-F]*/inactive-color \"${INACTIVE_COLOR}/" \
+    "$CONFIG"

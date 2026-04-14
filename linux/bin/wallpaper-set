@@ -1,0 +1,16 @@
+#!/bin/bash
+set -euo pipefail
+
+IMAGE="${1:?Usage: wallpaper-set <image-path>}"
+IMAGE=$(realpath "$IMAGE")
+MODE=$(cat ~/.local/state/theme 2>/dev/null || echo dark)
+
+# Ensure awww daemon is running
+pgrep -x awww-daemon >/dev/null 2>&1 || { awww-daemon & sleep 0.3; }
+
+# Run matugen: sets wallpaper via awww AND generates all templates
+matugen image "$IMAGE" -m "$MODE" 2>/dev/null
+
+# Persist wallpaper path (global + per-mode)
+echo "$IMAGE" > ~/.local/state/wallpaper
+echo "$IMAGE" > ~/.local/state/wallpaper-"$MODE"

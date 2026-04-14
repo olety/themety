@@ -1,0 +1,6 @@
+#!/bin/bash
+# Save to file AND clipboard
+f=~/Pictures/screenshots/$(date +%Y-%m-%d_%H-%M-%S).png
+mkdir -p ~/Pictures/screenshots
+grim -g "$(slurp)" "$f"
+wl-copy -t image/png < "$f"

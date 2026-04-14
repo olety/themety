@@ -1,0 +1,89 @@
+@import "colors.css";
+
+* {
+    font-family: "Space Mono", monospace;
+    font-size: 13px;
+    border: none;
+    border-radius: 0;
+    min-height: 0;
+}
+
+window#waybar {
+    background-color: alpha(@bg_color, 0.92);
+    color: @ink_body;
+    border-bottom: 1px solid @accent_dim;
+}
+
+tooltip {
+    background-color: @bg_raised;
+    color: @ink_primary;
+    border: 1px solid @accent_dim;
+    border-radius: 0;
+}
+
+/* --- Workspaces --- */
+#workspaces button {
+    padding: 0 4px;
+    color: @ink_muted;
+    background: transparent;
+}
+
+#workspaces button.active {
+    color: @accent;
+}
+
+#workspaces button.urgent {
+    color: @error;
+}
+
+/* --- Modules --- */
+#clock,
+#cpu,
+#memory,
+#network,
+#pulseaudio,
+#tray {
+    padding: 0 8px;
+    color: @ink_body;
+}
+
+#clock {
+    color: @ink_primary;
+}
+
+/* --- Window title --- */
+#window {
+    color: @ink_muted;
+}
+
+/* --- Whisrs STT status --- */
+#custom-whisrs {
+    padding: 0 8px;
+}
+
+#custom-whisrs.recording {
+    color: @error;
+    font-weight: bold;
+    animation: blink 1s ease-in-out infinite;
+}
+
+#custom-whisrs.transcribing {
+    color: @tertiary;
+}
+
+#custom-whisrs.idle {
+    color: transparent;
+}
+
+@keyframes blink {
+    50% { opacity: 0.3; }
+}
+
+/* --- Tray --- */
+#tray > .passive {
+    -gtk-icon-effect: dim;
+}
+
+#tray > .needs-attention {
+    -gtk-icon-effect: highlight;
+}
