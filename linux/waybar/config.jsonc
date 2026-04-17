@@ -10,7 +10,6 @@
     "modules-right": [
         "custom/whisrs",
         "pulseaudio",
-        "network",
         "cpu",
         "memory",
         "clock",
@@ -38,13 +37,6 @@
         "format": "Vol {volume}%",
         "format-muted": "Vol muted",
         "on-click": "pavucontrol"
-    },
-    "network": {
-        "format-wifi": "Net {essid}",
-        "format-ethernet": "Net {ipaddr}",
-        "format-disconnected": "Net off",
-        "tooltip-format": "{ifname}: {ipaddr}/{cidr}\nGateway: {gwaddr}",
-        "on-click": "bash -c 'ip -4 addr show scope global | grep inet | awk \"{print \\$2}\" | wl-copy && notify-send \"IP copied\" \"$(wl-paste)\" 2>/dev/null || true'"
     },
     "cpu": {
         "format": "CPU {usage}%",

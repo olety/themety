@@ -229,6 +229,7 @@ spawn-at-startup "waybar"
 spawn-at-startup "mako"
 spawn-at-startup "whisrsd"
 spawn-at-startup "awww-daemon"
+spawn-at-startup "nm-applet" "--indicator"
 spawn-sh-at-startup "sleep 1.5 && [ -f ~/.local/state/wallpaper ] && wallpaper-set $(cat ~/.local/state/wallpaper)"
 spawn-sh-at-startup "sleep 2 && eww open desktop-clock"
 
