@@ -3,6 +3,12 @@
 // Check the wiki for a full description of the configuration:
 // https://yalter.github.io/niri/Configuration:-Introduction
 
+// Set session env for spawned processes (GTK portal needs these for dark/light detection)
+environment {
+    XDG_CURRENT_DESKTOP "niri"
+    XDG_SESSION_TYPE "wayland"
+}
+
 // Input device configuration.
 // Find the full list of options on the wiki:
 // https://yalter.github.io/niri/Configuration:-Input
@@ -221,8 +227,8 @@ layout {
 // which may be more convenient to use.
 // See the binds section below for more spawn examples.
 
-// Import Wayland env into systemd so portals (gtk, gnome) can find the display
-spawn-sh-at-startup "systemctl --user import-environment WAYLAND_DISPLAY"
+// Import env into systemd so portals can find display + detect desktop
+spawn-sh-at-startup "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE"
 
 // This line starts waybar, a commonly used bar for Wayland compositors.
 spawn-at-startup "waybar"
@@ -355,6 +361,8 @@ binds {
 
     // Screenshots
     Mod+Shift+S hotkey-overlay-title="Screenshot Area → Clipboard" { spawn "screenshot-area"; }
+    Mod+Shift+4 hotkey-overlay-title="Screenshot Area → Clipboard" { spawn "screenshot-area"; }
+    Mod+Shift+3 hotkey-overlay-title="Screenshot Full → Clipboard" { spawn "screenshot-full"; }
     // Print — see bottom of binds section
     XF86AudioStop        allow-when-locked=true { spawn-sh "playerctl stop"; }
     XF86AudioPrev        allow-when-locked=true { spawn-sh "playerctl previous"; }
