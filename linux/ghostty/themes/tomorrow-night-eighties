@@ -1,7 +1,9 @@
-background = 2d2d2d
-foreground = cccccc
-selection-background = 6699cc
-selection-foreground = ffffff
+background = #2d2d2d
+foreground = #cccccc
+cursor-color = #cccccc
+cursor-text = #2d2d2d
+selection-background = #6699cc
+selection-foreground = #ffffff
 palette = 0=#2d2d2d
 palette = 1=#f2777a
 palette = 2=#99cc99

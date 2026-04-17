@@ -9,7 +9,7 @@ font-size = 13
 theme = dark:tomorrow-night-eighties,light:solarized-light-custom
 
 # Window
-window-theme = ghostty
+window-theme = auto
 window-decoration = auto
 gtk-titlebar-style = native
 window-padding-x = 4
@@ -20,9 +20,6 @@ scrollback-limit = 10000
 
 # Mouse
 mouse-hide-while-typing = true
-
-# Performance
-bold-is-bright = false
 
 # Keybinds — Alt is the Linux equivalent of macOS Cmd
 keybind = alt+d=new_split:right
